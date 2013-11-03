@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script src="http://localhost:8080/primus/primus.js"></script>
+    <script>
+        /*var Game = function(){
+            var self = this,
+                mainTimerLink,
+                mainTimerStep = 30,
+                stepNumber = 0,
+                monsters = [],
+                players = [];
+
+            var step = function(){
+                stepNumber++;
+                //console.log('Starting step number '+ stepNumber);
+                //debugger;
+                moveMonsters();
+            };
+
+            var moveMonsters = function(){
+                for(var i=0; i< monsters.length; i++){
+                    monsters[i].move(monsters[i].decideNextStepDirection());
+                    //console.log(monsters[i].name + " at "+ monsters[i].coordinates[0]+ ':'+ monsters[i].coordinates[1]);
+                    $('#'+monsters[i].name).css({
+                        left: monsters[i].coordinates[0],
+                        top: monsters[i].coordinates[1]
+                    });
+                }
+                for(i=0; i< players.length; i++){
+                    players[i].move();
+                    $('#Player').css({
+                        left: players[i].coordinates[0],
+                        top: players[i].coordinates[1]
+                    });
+                }
+            };
+
+            this.start = function(){
+                this.stepNumber = 0;
+                monsters.push(new Monster('Orc', 5));
+                monsters.push(new Monster('Troll', 2));
+                this.mainTimerLink = setInterval(function(){
+                    step.call(self);
+                }, mainTimerStep);
+                return this;
+            };
+            this.addPlayer = function(client){
+                players.push(new Player(client, 10));
+            }
+        };
+        var Monster = function(name, speed){
+            this.coordinates = [400,400];
+            this.name = name;
+
+            var prevDirection = -1;
+            var speed = speed;
+            this.decideNextStepDirection = function(){
+                var direction = Math.round(Math.random()*10);
+                if( prevDirection < 0){
+                    direction = direction % 4;
+                }else if( direction > 3){
+                    direction = prevDirection;
+                }
+                prevDirection = direction;
+                return direction;
+            };
+            this.move = function(direction){
+                switch(direction){
+                    case 0: this.coordinates[0] = this.coordinates[0] - speed; break;
+                    case 1: this.coordinates[1] = this.coordinates[1] - speed; break;
+                    case 2: this.coordinates[0] = this.coordinates[0] + speed; break;
+                    case 3: this.coordinates[1] = this.coordinates[1] + speed; break;
+                }
+            }
+        };
+        var Player = function(client, speed){
+            var client = client;
+            this.coordinates = [10,10];
+            var speed = speed;
+            this.move = function(){
+                var ms = client.movingState;
+                if( ms[0] )
+                    this.coordinates[0] = this.coordinates[0] - speed;
+                if( ms[1] )
+                    this.coordinates[1] = this.coordinates[1] - speed;
+                if( ms[2] )
+                    this.coordinates[0] = this.coordinates[0] + speed;
+                if( ms[3] )
+                    this.coordinates[1] = this.coordinates[1] + speed;
+
+            }
+        };
+
+        var Client = function(){
+            var self = this;
+            this.movingState = [0,0,0,0];
+            $(document).on('keydown', function(e){
+                switch(e.keyCode){
+                    case 37: self.movingState[0] = 1; break;
+                    case 38: self.movingState[1] = 1; break;
+                    case 39: self.movingState[2] = 1; break;
+                    case 40: self.movingState[3] = 1; break;
+                }
+            });
+            $(document).on('keyup', function(e){
+                switch(e.keyCode){
+                    case 37: self.movingState[0] = 0; break;
+                    case 38: self.movingState[1] = 0; break;
+                    case 39: self.movingState[2] = 0; break;
+                    case 40: self.movingState[3] = 0; break;
+                }
+            });
+        };
+
+        $(function(){
+            (new Game()).start().addPlayer(new Client());
+        });
+
+        var ClientSide = function(name){
+            this.name = name;
+            this.say = function(){
+                console.log('My id is '+this.name);
+            };
+
+            this.getName = function(){
+                console.log('name returned');
+                return this.name;
+            };
+            this.setName = function(name){
+                this.name = name;
+            }
+        };
+        ClientSide.prototype.yell = function(){
+            console.log('I NEED SOME HELP!!! '+this.name);
+        };
+        var c1 = new ClientSide('Tom');
+        var c2 = new ClientSide('Bob');
+
+
+       var join = function(){
+           var from = arguments[0];
+            for(var key in from){
+                var method = from[key];
+                if( typeof method === 'function'){
+                    from['$'+key] = callAtAll(arguments, key);
+                }
+            }
+        };
+        var callAtAll = function(objects, method ){
+            return function(){
+                for(var i=0; i<objects.length; i++){
+                    objects[i][method].apply(objects[i], arguments);
+                }
+            }
+        };
+        join(c1, c2);*/
+
+        var ClientSide = function(name){
+            this.name = name;
+            this.say = function(){
+                console.log('My id is '+this.name);
+            };
+
+            this.getName = function(){
+                console.log('name returned');
+                return this.name;
+            };
+
+            this.setName = function(name){
+                this.name = name;
+            };
+
+            this.log = function(){
+                console.log(this.name);
+            };
+        };
+        ClientSide.prototype.yell = function(){
+            console.log('I NEED SOME HELP!!! '+this.name);
+        };
+        var c1 = new ClientSide('Tom');
+
+        var PrimusSync = new (function(){
+            var primusWrap = function(object, methodName, method, channel){
+                return function(){
+                    channel.write({
+                        _m: methodName,
+                        _a: Array.prototype.slice.call(arguments)
+                    });
+                    return method.apply(object, arguments);
+                }
+            };
+            var primusOnlyWrap = function(object, methodName, method, channel){
+                return function(){
+                    channel.write({
+                        _m: methodName,
+                        _a: Array.prototype.slice.call(arguments)
+                    });
+                }
+            };
+            this.write = function(object, channel){
+                for(var key in object){
+                    var method = object[key];
+                    if( typeof method === 'function'){
+                        object[key].$ = primusWrap(object, key, object[key], channel);
+                        object[key].$$ = primusOnlyWrap(object, key, object[key], channel);
+                    }
+                }
+            };
+            this.read = function(object, channel){
+                channel.on('data', function(data){
+                    object[data._m].apply(object, data._a);
+                });
+                for(var key in object){
+                    var method = object[key];
+                    if( typeof method === 'function'){
+                        object['$'+key] = primusWrap(object, key, object[key], channel);
+                    }
+                }
+            }
+        })();
+        var primus = new Primus('http://localhost:8080/');
+
+        PrimusSync.write(c1, primus.channel('client-controls'));
+    </script>
+    <style>
+        .monster{
+            position: fixed;
+            background-color: red;
+            width: 3px;
+            height: 3px;
+            -webkit-transition-duration: 0.03s;
+            -webkit-transition-timing-function: linear;
+        }
+        #Troll{
+            background-color: Green;
+        }
+        #Player{
+            background-color: black;
+        }
+    </style>
+    <script src="/game/namespace.js"></script>
+    <script src="/game/App.js"></script>
+    <script>
+        var config = new App.ServerConfig({
+            stepInterval: 500
+        });
+        var server = new App.Server(config);
+
+    </script>
+</head>
+<body>
+    <div id='Orc' class="monster"></div>
+    <div id='Troll' class="monster"></div>
+    <div id='Player' class="monster"></div>
+</body>
+</html>
